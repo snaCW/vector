@@ -12,12 +12,14 @@ class vector
     {
         protected:
             T* pointer = nullptr;
+            vector* _vector = nullptr;
 
         public:
             iterator() {}
-            iterator(T* pointer)
+            iterator(T* pointer, vector* _vector)
             {
                 this->pointer = pointer;
+                this->_vector = _vector;
             }
             iterator& operator++()
             {
@@ -55,7 +57,30 @@ class vector
             }
             T& operator*()
             {
+                int length = _vector->length;
+                T* begin = _vector->array;
+                T* end = _vector->array + length;
+                if (pointer < begin || pointer >= end)
+                {
+                    throw std::invalid_argument("out of range");
+                }
                 return *pointer;
+            }
+            int operator-(const iterator& it) const
+            {
+                return pointer - it.pointer;
+            }
+            iterator operator-(int i) const
+            {
+                return iterator(pointer - i, _vector);
+            }
+            iterator operator+(int i) const
+            {
+                return iterator(pointer + i, _vector);
+            }
+            int distance(const iterator& it)
+            {
+                return pointer - it.pointer;
             }
     };
     public: class reverse_iterator : public iterator
@@ -97,10 +122,37 @@ class vector
                     return true;
                 return false;
             }
+            T& operator*()
+            {
+                int length = this->_vector->length;
+                T* begin = this->_vector->array;
+                T* end = this->_vector->array + length;
+                if (this->pointer < begin || this->pointer >= end)
+                {
+                    throw std::invalid_argument("out of range");
+                }
+                return *this->pointer;
+            }
+            int operator-(const reverse_iterator& it) const
+            {
+                return it.pointer - this->pointer;
+            }
+            reverse_iterator operator-(int i) const
+            {
+                return reverse_iterator(this->pointer + i, this->_vector);
+            }
+            reverse_iterator operator+(int i) const
+            {
+                return reverse_iterator(this->pointer - i, this->_vector);
+            }
+            int distance(const reverse_iterator& it)
+            {
+                return it.pointer - this->pointer;
+            }
     };
 
     private:
-        T* array = new T[20];
+        T* array = new T[1];
         int length;
         int allocation_size;
 
@@ -108,27 +160,24 @@ class vector
         vector()
         {
             length = 0;
-            allocation_size = 20;
+            allocation_size = 1;
         }
         vector(int allocation_size)
         {
             length = allocation_size;
-            this->allocation_size = allocation_size;
-            delete array;
-            array = new T[length];
+            this->allocation_size = getTheNextPowerOf2(allocation_size);
+            array = new T[this->allocation_size];
             
-            T default_value = getDefaultValue();
             for (int i = 0; i < length; i++)
             {
-                array[i] = default_value;
+                array[i] = T();
             }
         }
-        vector(int allocation_size, T initial_value)
+        vector(int allocation_size, const T& initial_value)
         {
             length = allocation_size;
-            this->allocation_size = allocation_size;
-            delete array;
-            array = new T[length];
+            this->allocation_size = getTheNextPowerOf2(allocation_size);;
+            array = new T[this->allocation_size];
             
             for (int i = 0; i < length; i++)
             {
@@ -137,7 +186,6 @@ class vector
         }
         vector(const vector& v)
         {
-            delete array;
             array = v.array;
             length = v.length;
             allocation_size = v.allocation_size;
@@ -157,10 +205,9 @@ class vector
         }
         void clear()
         {
-            delete array;
-            array = new T[20];
+            array = new T[1];
             length = 0;
-            allocation_size = 20;
+            allocation_size = 1;
         }
         T& back()
         {
@@ -184,30 +231,30 @@ class vector
         }
         iterator begin()
         {
-            return iterator(array);
+            return iterator(array, this);
         }
         reverse_iterator rbegin()
         {
-            return reverse_iterator(array + length - 1);
+            return reverse_iterator(array + length - 1, this);
         }
         iterator end()
         {
-            return iterator(array + length);
+            return iterator(array + length, this);
         }
         reverse_iterator rend()
         {
-            return reverse_iterator(array - 1);
+            return reverse_iterator(array - 1, this);
         }
-        void assign(iterator& begin, iterator& end)
+        void assign(const iterator& begin, const iterator& end)
         {
-            delete array;
-            length = (end.pointer - begin.pointer) / sizeof(T*);
-            array = new T[length];
+            length = end - begin;
+            allocation_size = getTheNextPowerOf2(length);
+            array = new T[allocation_size];
             
             int index = 0;
             for (iterator it = begin; it != end; it++)
             {
-                array[index++] = *(it.pointer);
+                array[index++] = *it;
             }
         }
         T& at(int index)
@@ -229,26 +276,6 @@ class vector
 
     
     private:
-        T getDefaultValue()
-        {
-            switch (typeid(T))
-            {
-                case typeid(bool):
-                case typeid(short):
-                case typeid(unsigned short):
-                case typeid(int):
-                case typeid(unsigned int):
-                case typeid(float):
-                case typeid(double):
-                case typeid(long):
-                case typeid(unsigned long):
-                case typeid(long long):
-                case typeid(unsigned long long): return 0;
-                
-                case typeid(std::string): return "";
-                default: return T();
-            }
-        }
         void resize()
         {
             T* array = new T[allocation_size * 2];
@@ -256,10 +283,18 @@ class vector
             {
                 array[i] = this->array[i];
             }
-            delete this->array;
+            allocation_size *= 2;
             this->array = array;
         }
+        int getTheNextPowerOf2(int length)
+        {
+            int result = 1;
+            while (result < length)
+            {
+                result *= 2;
+            }
+            return result;
+        }
 };
-
 
 #endif

@@ -4,6 +4,7 @@
 # Ignore compiled files
 *.exe
 *.h.gch
+*.out
 
 # Ignore the main.cpp file
 main.cpp
